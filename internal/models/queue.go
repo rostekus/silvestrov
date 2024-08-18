@@ -1,6 +1,8 @@
 package models
 
-type Queue struct {
+import "context"
+
+type QueueInfo struct {
 	id                int
 	Name              string
 	RateLimit         float64
@@ -9,6 +11,9 @@ type Queue struct {
 }
 
 type QueueStorage interface {
-	GetQueue(tenantId int64, queueName string) (Queue, error)
-	CreateQueue(tenantId int64, queue Queue) (Queue, error)
+	GetQueue(c context.Context, tenantId int64, queueName string) (QueueInfo, error)
+	CreateQueue(c context.Context, tenantId int64, queue QueueInfo) (QueueInfo, error)
+	DeleteQueue(c context.Context, tenantId int64, queueName string) error
+	ListQueues(c context.Context, tenantId int64) ([]string, error)
+	Publish(c context.Context, tenantId int64, queueName string, message []byte) error
 }

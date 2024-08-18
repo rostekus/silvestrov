@@ -9,6 +9,32 @@ import (
 	"github.com/rostekus/silvestrov/internal/server/middleware"
 )
 
+func (s *sqsServer) PublishMsg(c *fiber.Ctx) error {
+
+	req := &PublishMessageRequest{}
+
+	err := json.Unmarshal(c.Body(), req)
+	if err != nil {
+		return err
+	}
+
+	tenantId := s.getTenantID(c)
+
+	ctx := context.Background()
+
+	err = s.sqs.PublishMsg(ctx, tenantId, req.QueueUrl, []byte(req.MessageBody))
+	if err != nil {
+		return err
+	}
+
+	resp := PublishMessageResponse{
+		MessageId: "1",
+	}
+
+	return c.JSON(resp)
+
+}
+
 func (s *sqsServer) CreateQueue(c *fiber.Ctx) error {
 
 	req := &CreateQueueRequest{}
@@ -18,9 +44,9 @@ func (s *sqsServer) CreateQueue(c *fiber.Ctx) error {
 		return err
 	}
 
-	tenantId := c.Locals(middleware.TenantID).(int64)
+	tenantId := s.getTenantID(c)
 
-	q := models.Queue{
+	q := models.QueueInfo{
 		Name:              req.QueueName,
 		RateLimit:         -1,
 		MaxRetries:        -1,
@@ -29,8 +55,19 @@ func (s *sqsServer) CreateQueue(c *fiber.Ctx) error {
 
 	ctx := context.Background()
 
-	_, err = s.sqs.CreateQueue(&ctx, tenantId, q)
+	qCreated, err := s.sqs.CreateQueue(ctx, tenantId, q)
 
-	return err
+	if err != nil {
+		return err
+	}
+	resp := CreateQueueResponse{
+		QueueUrl: qCreated.Name,
+	}
+	return c.JSON(resp)
 
+}
+
+func (s *sqsServer) getTenantID(c *fiber.Ctx) int64 {
+
+	return c.Locals(middleware.TenantID).(int64)
 }

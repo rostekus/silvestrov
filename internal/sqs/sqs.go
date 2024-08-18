@@ -18,29 +18,33 @@ func NewSQS(qStore models.QueueStorage) *SQS {
 	}
 }
 
-func (s *SQS) GetQueue(tenantId int64, queueName string) (models.Queue, error) {
+func (s *SQS) PublishMsg(c context.Context, tenantId int64, queueName string, msg []byte) error {
+	return s.queueStore.Publish(c, tenantId, queueName, msg)
+}
 
-	return s.GetQueue(tenantId, queueName)
+func (s *SQS) GetQueue(c context.Context, tenantId int64, queueName string) (models.QueueInfo, error) {
+
+	return s.queueStore.GetQueue(c, tenantId, queueName)
 
 }
-func (s *SQS) CreateQueue(c *context.Context, tenantId int64, qToStore models.Queue) (models.Queue, error) {
+func (s *SQS) CreateQueue(c context.Context, tenantId int64, qToStore models.QueueInfo) (models.QueueInfo, error) {
 	if len(qToStore.Name) > 80 {
-		return models.Queue{}, fmt.Errorf("Queue name error should be longer then 80 chars")
+		return models.QueueInfo{}, fmt.Errorf("Queue name error should be longer then 80 chars")
 	}
 
 	regex, err := regexp.Compile(`^[a-zA-Z0-9-_]+$`)
 	if err != nil {
-		return models.Queue{}, err
+		return models.QueueInfo{}, err
 	}
 
 	if !regex.MatchString(qToStore.Name) {
-		return models.Queue{}, fmt.Errorf("Queue name is not in valid format")
+		return models.QueueInfo{}, fmt.Errorf("Queue name is not in valid format")
 	}
 
-	qNew, err := s.queueStore.CreateQueue(tenantId, qToStore)
+	qNew, err := s.queueStore.CreateQueue(c, tenantId, qToStore)
 
 	if err != nil {
-		return models.Queue{}, err
+		return models.QueueInfo{}, err
 	}
 
 	return qNew, err

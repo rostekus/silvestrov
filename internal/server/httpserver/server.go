@@ -26,7 +26,7 @@ func NewServerSQS(logger *slog.Logger, sqsClient *sqs.SQS, config SQSServerConfi
 	app := fiber.New()
 
 	app.Use(middleware.SlogMiddleware(logger))
-
+	app.Use(middleware.AuthMiddleware)
 	s := &sqsServer{logger: logger,
 		sqs:    sqsClient,
 		server: app,
@@ -57,10 +57,11 @@ func (s *sqsServer) handleRequest(c *fiber.Ctx) error {
 	handleMsg := "Handling request action %s"
 
 	awsMethod := AWSMethod(action)
-	s.logger.Info(fmt.Sprintf(handleMsg, awsMethod))
+	s.logger.Debug(fmt.Sprintf(handleMsg, awsMethod))
 	var rc error
 	switch awsMethod {
 	case AmazonSQSSendMessage:
+		rc = s.PublishMsg(c)
 	case AmazonSQSSendMessageBatch:
 	case AmazonSQSReceiveMessage:
 	case AmazonSQSDeleteMessage:
